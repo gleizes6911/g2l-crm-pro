@@ -328,3 +328,60 @@ model UtilisateurLegacy {
 
   @@map("utilisateurs")
 }
+
+/// Métiers analytiques G2L
+model AnalytiqueMetier {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(30)
+  libelle     String   @db.VarChar(100)
+  description String?
+  ordre       Int      @default(0)
+  actif       Boolean  @default(true)
+  couleur     String?  @default("#2563eb") @db.VarChar(7)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  categories   AnalytiqueCategorie[]
+  affectations AnalytiqueAffectation[]
+
+  @@map("analytique_metiers")
+}
+
+/// Catégories analytiques (regroupement de comptes)
+model AnalytiqueCategorie {
+  id        String   @id @default(cuid())
+  metierId  String   @map("metier_id")
+  libelle   String   @db.VarChar(100)
+  type      String   @db.VarChar(10) // CHARGE | PRODUIT
+  ordre     Int      @default(0)
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  metier       AnalytiqueMetier        @relation(fields: [metierId], references: [id], onDelete: Cascade)
+  affectations AnalytiqueAffectation[]
+
+  @@index([metierId])
+  @@map("analytique_categories")
+}
+
+/// Affectation compte FEC → catégorie → métier (avec % de répartition)
+model AnalytiqueAffectation {
+  id           String   @id @default(cuid())
+  societeId    Int?     @map("societe_id") // null = toutes sociétés
+  compteNum    String   @map("compte_num") @db.VarChar(20)
+  metierId     String   @map("metier_id")
+  categorieId  String?  @map("categorie_id")
+  pourcentage  Decimal  @default(100) @db.Decimal(5, 2)
+  actif        Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  metier    AnalytiqueMetier     @relation(fields: [metierId], references: [id], onDelete: Cascade)
+  categorie AnalytiqueCategorie? @relation(fields: [categorieId], references: [id], onDelete: SetNull)
+
+  @@index([compteNum])
+  @@index([metierId])
+  @@index([societeId, compteNum])
+  @@map("analytique_affectations")
+}

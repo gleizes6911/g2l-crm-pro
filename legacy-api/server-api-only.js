@@ -33,6 +33,7 @@ const flotteRoutes = require("./routes/flotte");
 const rentabiliteRoutes = require("./routes/rentabilite");
 const dashboardGroupeRoutes = require("./routes/dashboard-groupe");
 const referentielRoutes = require("./routes/referentiel");
+const analytiqueRoutes = require("./routes/analytique");
 
 const app = express();
 const PORT = Number(process.env.API_PORT || process.env.LEGACY_API_PORT || 3001);
@@ -65,6 +66,7 @@ app.use("/api", flotteRoutes);
 app.use("/api/rentabilite", rentabiliteRoutes);
 app.use("/api", dashboardGroupeRoutes);
 app.use("/api", referentielRoutes);
+app.use("/api/analytique", analytiqueRoutes);
 app.use("/uploads", express.static(documentService.UPLOAD_DIR));
 if (!fs.existsSync(path.join(__dirname, "..", "uploads"))) {
   fs.mkdirSync(path.join(__dirname, "..", "uploads"), { recursive: true });

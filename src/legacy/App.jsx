@@ -44,6 +44,7 @@ import Rentabilite from './pages/direction/Rentabilite'
 import MasseSalarialePage from './pages/finance/MasseSalarialePage'
 import TICPE from './pages/direction/TICPE'
 import FECPage from './pages/direction/FEC'
+import Analytique from './pages/direction/Analytique'
 import SuiviSAV from './pages/sav/SuiviSAV'
 
 function App() {
@@ -231,6 +232,11 @@ function App() {
             <Route path="direction/analyse-financiere" element={
               <ProtectedRoute allowedRoles={['DIRECTION', 'ADMIN', 'RH', 'MANAGER']} allowedModules={['analyse-financiere']}>
                 <AnalyseFinanciereDirection />
+              </ProtectedRoute>
+            } />
+            <Route path="direction/analytique" element={
+              <ProtectedRoute allowedRoles={['DIRECTION', 'ADMIN', 'RH', 'MANAGER']} allowedModules={['analyse-financiere']}>
+                <Analytique />
               </ProtectedRoute>
             } />
             <Route path="direction/rentabilite" element={

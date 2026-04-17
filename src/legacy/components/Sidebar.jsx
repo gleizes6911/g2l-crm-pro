@@ -35,6 +35,7 @@ const sections = [
     roles: ['DIRECTION', 'ADMIN', 'RH', 'MANAGER'],
     items: [
       { path: '/direction/analyse-financiere', label: 'Analyse financière', permissionId: 'analyse-financiere', roles: ['DIRECTION', 'ADMIN', 'RH', 'MANAGER'] },
+      { path: '/direction/analytique', label: 'Analyse par métier', permissionId: 'analyse-financiere', roles: ['DIRECTION', 'ADMIN', 'RH', 'MANAGER'] },
       { path: '/direction/rentabilite', label: 'Rentabilité', permissionId: 'rentabilite', roles: ['DIRECTION', 'ADMIN', 'RH', 'MANAGER'] },
       {
         path: '/finance/masse-salariale',
