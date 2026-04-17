@@ -1093,7 +1093,7 @@ class SalesforceService {
    */
   disconnect() {
     if (this.conn) {
-      this.conn.logout();
+      this.conn.logout().catch(() => {});
       this.conn = null;
     }
   }

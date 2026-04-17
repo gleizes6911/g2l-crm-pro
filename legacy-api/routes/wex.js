@@ -470,13 +470,6 @@ router.get('/account/summary', (req, res) => {
 
 router.get('/cards', (req, res) => {
   const cards = readData('cards', []);
-  // Log temporaire de debug structure cartes WEX
-  if (Array.isArray(cards) && cards.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log('[WEX DEBUG] sample card keys:', Object.keys(cards[0]));
-    // eslint-disable-next-line no-console
-    console.log('[WEX DEBUG] sample card:', JSON.stringify(cards[0], null, 2));
-  }
   res.json(cards);
 });
 

@@ -296,11 +296,15 @@ async function buildCalculPayload({
   }
 
   const tq = await pool.query(
-    `SELECT * FROM ticpe_taux WHERE annee = $1 AND carburant = 'gazole' LIMIT 1`,
-    [Number(annee_taux)]
+    `SELECT * FROM ticpe_taux
+     WHERE carburant_code = 'GO'
+       AND date_debut <= NOW()
+       AND (date_fin IS NULL OR date_fin >= NOW())
+     ORDER BY date_debut DESC
+     LIMIT 1`
   );
   if (!tq.rows.length) {
-    const err = new Error(`Taux TICPE introuvable pour ${annee_taux} / gazole`);
+    const err = new Error('Taux TICPE introuvable pour GO à la date courante');
     err.statusCode = 400;
     throw err;
   }
@@ -550,11 +554,15 @@ async function calculerDetailMois(debut, fin, vehiculeSfIds, fournisseurs, annee
       ? Number(annee_taux)
       : Number(String(debut).slice(0, 4));
   const tq = await pool.query(
-    `SELECT * FROM ticpe_taux WHERE annee = $1 AND carburant = 'gazole' LIMIT 1`,
-    [year]
+    `SELECT * FROM ticpe_taux
+     WHERE carburant_code = 'GO'
+       AND date_debut <= NOW()
+       AND (date_fin IS NULL OR date_fin >= NOW())
+     ORDER BY date_debut DESC
+     LIMIT 1`
   );
   if (!tq.rows.length) {
-    const err = new Error(`Taux TICPE introuvable pour ${year} / gazole`);
+    const err = new Error('Taux TICPE introuvable pour GO à la date courante');
     err.statusCode = 400;
     throw err;
   }
@@ -665,8 +673,16 @@ function makeReference(periodicite, periodeDebut, filiale) {
 router.get('/taux', async (req, res) => {
   try {
     if (!requirePool(res)) return;
-    const q = await pool.query(`SELECT * FROM ticpe_taux ORDER BY annee DESC, carburant ASC`);
-    res.json({ data: q.rows });
+    const q = await pool.query(`SELECT * FROM ticpe_taux ORDER BY date_debut DESC, carburant_code ASC`);
+    const rows = q.rows.map(r => {
+      const meta = r.metadata && typeof r.metadata === 'object' ? r.metadata : {};
+      return {
+        ...r,
+        description: meta.description || null,
+        reference_legale: meta.reference_legale || null,
+      };
+    });
+    res.json({ data: rows });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -675,22 +691,30 @@ router.get('/taux', async (req, res) => {
 router.post('/taux', async (req, res) => {
   try {
     if (!requirePool(res)) return;
-    const { annee, carburant, taux_cents, description, reference_legale } = req.body || {};
-    if (!annee || !carburant || taux_cents == null) {
-      return res.status(400).json({ error: 'annee, carburant, taux_cents requis' });
+    const { carburant_code, date_debut, date_fin, taux_cents, description, reference_legale } = req.body || {};
+    if (!carburant_code || !date_debut || taux_cents == null) {
+      return res.status(400).json({ error: 'carburant_code, date_debut, taux_cents requis' });
     }
     const q = await pool.query(
       `
-      INSERT INTO ticpe_taux (annee, carburant, taux_cents, description, reference_legale)
-      VALUES ($1,$2,$3,$4,$5)
-      ON CONFLICT (annee, carburant)
+      INSERT INTO ticpe_taux (carburant_code, date_debut, date_fin, taux_cents, description, reference_legale)
+      VALUES ($1,$2,$3,$4,$5,$6)
+      ON CONFLICT (carburant_code, date_debut)
       DO UPDATE SET
+        date_fin = EXCLUDED.date_fin,
         taux_cents = EXCLUDED.taux_cents,
         description = EXCLUDED.description,
         reference_legale = COALESCE(EXCLUDED.reference_legale, ticpe_taux.reference_legale)
       RETURNING *
       `,
-      [Number(annee), String(carburant), Number(taux_cents), description || null, reference_legale || null]
+      [
+        String(carburant_code),
+        date_debut,
+        date_fin || null,
+        Number(taux_cents),
+        description || null,
+        reference_legale || null,
+      ]
     );
     res.json({ ok: true, data: q.rows[0] });
   } catch (e) {
@@ -703,19 +727,20 @@ router.put('/taux/:id', async (req, res) => {
     if (!requirePool(res)) return;
     const id = Number(req.params.id);
     const body = req.body || {};
-    const { annee, carburant, taux_cents, description, reference_legale } = body;
+    const { carburant_code, date_debut, date_fin, taux_cents, description, reference_legale } = body;
     const q = await pool.query(
       `
       UPDATE ticpe_taux
-      SET annee = $2, carburant = $3, taux_cents = $4, description = $5,
-          reference_legale = CASE WHEN $6 THEN $7::text ELSE ticpe_taux.reference_legale END
+      SET carburant_code = $2, date_debut = $3, date_fin = $4, taux_cents = $5, description = $6,
+          reference_legale = CASE WHEN $7 THEN $8::text ELSE ticpe_taux.reference_legale END
       WHERE id = $1
       RETURNING *
       `,
       [
         id,
-        Number(annee),
-        String(carburant),
+        String(carburant_code),
+        date_debut,
+        date_fin || null,
         Number(taux_cents),
         description || null,
         Object.prototype.hasOwnProperty.call(body, 'reference_legale'),

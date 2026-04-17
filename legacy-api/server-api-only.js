@@ -13,6 +13,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env.local"), overr
 const documentService = require("./services/documentService");
 const authService = require("./services/authService");
 const { initDatabase } = require("./services/database");
+const { runWebfleetMigrations } = require('./services/webfleet-migrations');
 const { startWebfleetCronJobs } = require("./server/jobs/webfleetSync");
 const { verifierRappelsVisitesMedicales } = require("./server/jobs/visitesMedicalesRappels");
 const wexRoutes = require("./routes/wex");
@@ -80,6 +81,7 @@ verifierRappelsVisitesMedicales();
 async function startServer() {
   try {
     await initDatabase();
+    await runWebfleetMigrations();
     await authService.seedAdminIfEmpty();
   } catch (err) {
     console.error("[legacy-api][DB] Initialisation PostgreSQL :", err?.message || err);

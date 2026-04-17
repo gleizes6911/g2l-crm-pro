@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -k -n next,api -c blue,magenta \"npm run dev:next\" \"npm run dev:api\"",
+    "dev:clean": "kill $(lsof -ti:3000) 2>/dev/null; sleep 1 && npm run dev",
     "dev:next": "next dev",
     "dev:api": "node legacy-api/server-api-only.js",
     "build": "next build",

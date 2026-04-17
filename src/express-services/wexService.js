@@ -917,12 +917,6 @@ async function getCards() {
         const arr = Array.isArray(cards) ? cards : [];
         if (arr.length > 0) {
           // eslint-disable-next-line no-console
-          console.log('[WEX DEBUG] sample card FULL:', JSON.stringify(arr[0], null, 2));
-          // eslint-disable-next-line no-console
-          console.log('[WEX DEBUG] sample card keys:', Object.keys(arr[0]));
-          // eslint-disable-next-line no-console
-          console.log('[WEX DEBUG] sample card:', JSON.stringify(arr[0], null, 2));
-          // eslint-disable-next-line no-console
           console.log(`[WEX] ✅ ${arr.length} cartes récupérées (/card/details)`);
           return arr;
         }
@@ -1037,18 +1031,6 @@ async function getCardVelocityControls(cardNumber) {
       data?.data ||
       data;
 
-  if (cardDetail && typeof cardDetail === 'object') {
-    // eslint-disable-next-line no-console
-    console.log('[WEX DEBUG] card/search keys:', Object.keys(cardDetail));
-    // eslint-disable-next-line no-console
-    console.log(
-      '[WEX DEBUG] card/search velocityControls:',
-      cardDetail.velocityControls || cardDetail.velocity_controls || 'NON TROUVÉ'
-    );
-    // eslint-disable-next-line no-console
-    console.log('[WEX DEBUG] card/search cardControlProfile:', cardDetail.cardControlProfile || 'NON TROUVÉ');
-  }
-
   return cardDetail && typeof cardDetail === 'object' ? cardDetail : null;
 }
 
@@ -1083,8 +1065,6 @@ async function getCardDefaultProfile(accountNumber, cardProduct) {
   } catch {
     data = null;
   }
-  // eslint-disable-next-line no-console
-  console.log('[WEX DEBUG] default-profile:', JSON.stringify(data, null, 2));
   return data;
 }
 
@@ -1142,10 +1122,6 @@ async function getAccount() {
         const account = Array.isArray(data) ? data[0] : data?.accounts?.[0] || data;
         // eslint-disable-next-line no-console
         console.log('[WEX] ✅ getAccount OK avec payload:', JSON.stringify(payload));
-        // eslint-disable-next-line no-console
-        console.log('[WEX DEBUG] account keys:', Object.keys(account || {}));
-        // eslint-disable-next-line no-console
-        console.log('[WEX DEBUG] account complet:', JSON.stringify(account, null, 2));
         return account || null;
       }
 
@@ -1530,29 +1506,6 @@ async function syncToLocal(dateFrom, dateTo) {
         const details = await getTransactionDetails(txId);
 
         if (details) {
-          // Debug temporaire des champs véhicule disponibles
-          // eslint-disable-next-line no-console
-          console.log('[WEX DEBUG] champs véhicule tx:', {
-            // Depuis search-transactions (tx)
-            tx_licensePlate: tx.licensePlate,
-            tx_cardNumber: tx.cardNumber,
-            tx_driverName: tx.driverName,
-
-            // Depuis transaction/details (details)
-            det_licensePlate: details.licensePlate,
-            det_vehicleId: details.vehicleId,
-            det_embossingName: details.embossingName,
-            det_secondCardNo: details.secondCardNo,
-            det_adjProduct: details.adjProduct,
-            det_cardNumber: details.cardNumber,
-
-            // Depuis lineItems
-            lineItems_sample:
-              Array.isArray(details.lineItems) && details.lineItems.length > 0
-                ? details.lineItems[0]
-                : null
-          });
-
           const matchedCard =
             cardMap[String(normalizeCardNo(tx.cardNumber) || '')] ||
             cardMap[String(normalizeCardNo(details?.cardNumber) || '')] ||
@@ -1624,8 +1577,6 @@ async function syncToLocal(dateFrom, dateTo) {
 
           if (!debugLineItemsLogged && Array.isArray(lineItems) && lineItems.length > 0) {
             debugLineItemsLogged = true;
-            // eslint-disable-next-line no-console
-            console.log('[WEX DEBUG] lineItems:', JSON.stringify(lineItems, null, 2));
           }
 
           let fuelQuantity = 0;

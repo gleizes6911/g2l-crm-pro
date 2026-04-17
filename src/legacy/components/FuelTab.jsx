@@ -325,10 +325,13 @@ const FuelTab = ({ onBack }) => {
       });
 
       clearTimeout(t);
-      const data = await res.json().catch(async () => {
-        const txt = await res.text();
-        return { error: txt || `HTTP ${res.status}` };
-      });
+      const txt = await res.text();
+      let data;
+      try {
+        data = txt ? JSON.parse(txt) : {};
+      } catch {
+        data = { error: txt || `HTTP ${res.status}` };
+      }
       await fetchAll();
       await fetchMeta();
       if (!res.ok) {

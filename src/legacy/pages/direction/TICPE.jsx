@@ -16,25 +16,32 @@ function toNum(v, fallback = 0) {
 
 function toPeriodBounds(periodicite, annee, periodValue) {
   const y = Number(annee);
+  const pad = (n) => String(n).padStart(2, '0');
+  const lastDay = (year, month) => new Date(year, month, 0).getDate();
+
   if (periodicite === 'mensuel') {
     const m = Number(periodValue || 1);
-    const start = new Date(y, m - 1, 1);
-    const end = new Date(y, m, 0);
-    return { debut: start.toISOString().slice(0, 10), fin: end.toISOString().slice(0, 10) };
+    return {
+      debut: `${y}-${pad(m)}-01`,
+      fin: `${y}-${pad(m)}-${pad(lastDay(y, m))}`,
+    };
   }
   if (periodicite === 'trimestriel') {
     const t = Number(periodValue || 1);
-    const sm = (t - 1) * 3;
-    const start = new Date(y, sm, 1);
-    const end = new Date(y, sm + 3, 0);
-    return { debut: start.toISOString().slice(0, 10), fin: end.toISOString().slice(0, 10) };
+    const mDebut = (t - 1) * 3 + 1;
+    const mFin = t * 3;
+    return {
+      debut: `${y}-${pad(mDebut)}-01`,
+      fin: `${y}-${pad(mFin)}-${pad(lastDay(y, mFin))}`,
+    };
   }
   if (periodicite === 'semestriel') {
-    const s = Number(periodValue || 1);
-    const sm = s === 1 ? 0 : 6;
-    const start = new Date(y, sm, 1);
-    const end = new Date(y, sm + 6, 0);
-    return { debut: start.toISOString().slice(0, 10), fin: end.toISOString().slice(0, 10) };
+    const mDebut = periodValue === 2 ? 7 : 1;
+    const mFin = periodValue === 2 ? 12 : 6;
+    return {
+      debut: `${y}-${pad(mDebut)}-01`,
+      fin: `${y}-${pad(mFin)}-${pad(lastDay(y, mFin))}`,
+    };
   }
   return { debut: `${y}-01-01`, fin: `${y}-12-31` };
 }
@@ -83,6 +90,7 @@ export default function TICPE() {
 
   const [vehiculeFilterFiliale, setVehiculeFilterFiliale] = useState('Toutes');
   const [vehiculeFilterType, setVehiculeFilterType] = useState('Tous');
+  const [vehiculeFilterActif, setVehiculeFilterActif] = useState('Tous');
   const [eligibleOverrides, setEligibleOverrides] = useState({});
   const headerEligibleRef = useRef(null);
 
@@ -124,6 +132,15 @@ export default function TICPE() {
   const taux = Array.isArray(tauxQ.data?.data) ? tauxQ.data.data : [];
   const vehicules = Array.isArray(vehiculesQ.data?.data) ? vehiculesQ.data.data : [];
   const declarations = Array.isArray(declarationsQ.data?.data) ? declarationsQ.data.data : [];
+  const vehiculesFiltered = useMemo(
+    () =>
+      vehicules.filter((v) => {
+        if (vehiculeFilterActif === 'Actif') return Boolean(v.actif_salesforce);
+        if (vehiculeFilterActif === 'Inactif') return !Boolean(v.actif_salesforce);
+        return true;
+      }),
+    [vehicules, vehiculeFilterActif]
+  );
 
   const getEffectiveEligible = useCallback(
     (v) => (Object.prototype.hasOwnProperty.call(eligibleOverrides, v.id) ? eligibleOverrides[v.id] : Boolean(v.eligible)),
@@ -131,21 +148,21 @@ export default function TICPE() {
   );
 
   const eligibleVisibleCount = useMemo(
-    () => vehicules.filter((v) => getEffectiveEligible(v)).length,
-    [vehicules, getEffectiveEligible]
+    () => vehiculesFiltered.filter((v) => getEffectiveEligible(v)).length,
+    [vehiculesFiltered, getEffectiveEligible]
   );
-  const totalVisibleCount = vehicules.length;
+  const totalVisibleCount = vehiculesFiltered.length;
   const allVisibleEligible = totalVisibleCount > 0 && eligibleVisibleCount === totalVisibleCount;
   const noneVisibleEligible = eligibleVisibleCount === 0;
 
   const eligibleForCalcul = useMemo(
-    () => vehicules.filter((v) => v.eligible).map((v) => String(v.vehicule_sf_id).trim()),
-    [vehicules]
+    () => vehiculesFiltered.filter((v) => v.eligible).map((v) => String(v.vehicule_sf_id).trim()),
+    [vehiculesFiltered]
   );
 
   useEffect(() => {
     setIncludedSfIds(null);
-  }, [vehiculeFilterFiliale, vehiculeFilterType]);
+  }, [vehiculeFilterFiliale, vehiculeFilterType, vehiculeFilterActif]);
 
   useEffect(() => {
     if (!headerEligibleRef.current) return;
@@ -363,7 +380,7 @@ export default function TICPE() {
   };
 
   const bulkSetEligible = async (targetEligible) => {
-    const targets = vehicules.filter((v) => getEffectiveEligible(v) !== Boolean(targetEligible));
+    const targets = vehiculesFiltered.filter((v) => getEffectiveEligible(v) !== Boolean(targetEligible));
     if (!targets.length) return;
     await Promise.all(targets.map((v) => patchEligible(v, targetEligible)));
     await queryClient.invalidateQueries({ queryKey: ['ticpe-vehicules'] });
@@ -371,7 +388,7 @@ export default function TICPE() {
 
   const applyDefaultEligibleSelection = async () => {
     const shouldBeEligible = (v) => ['Tracteur', 'Véhicule de Livraison'].includes(String(v.type_vehicule || '').trim());
-    const targets = vehicules.filter((v) => getEffectiveEligible(v) !== shouldBeEligible(v));
+    const targets = vehiculesFiltered.filter((v) => getEffectiveEligible(v) !== shouldBeEligible(v));
     if (!targets.length) return;
     await Promise.all(targets.map((v) => patchEligible(v, shouldBeEligible(v))));
     await queryClient.invalidateQueries({ queryKey: ['ticpe-vehicules'] });
@@ -411,9 +428,10 @@ export default function TICPE() {
     await queryClient.invalidateQueries({ queryKey: ['ticpe-declarations'] });
   };
 
-  const years = [2022, 2023, 2024, 2025];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2021 }, (_, i) => 2022 + i);
   const tauxAnnee = useMemo(
-    () => taux.find((t) => Number(t.annee) === Number(annee) && String(t.carburant) === 'gazole'),
+    () => taux.find((t) => new Date(t.date_debut).getFullYear() === Number(annee)),
     [taux, annee]
   );
 
@@ -734,6 +752,11 @@ export default function TICPE() {
               <option>Tous</option>
               {[...new Set(vehicules.map((v) => v.type_vehicule).filter(Boolean))].map((t) => <option key={t}>{t}</option>)}
             </select>
+            <select className="rounded border px-2 py-1" value={vehiculeFilterActif} onChange={(e) => setVehiculeFilterActif(e.target.value)}>
+              <option>Tous</option>
+              <option>Actif</option>
+              <option>Inactif</option>
+            </select>
           </div>
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
@@ -759,7 +782,7 @@ export default function TICPE() {
                 </tr>
               </thead>
               <tbody>
-                {vehicules.map((v) => (
+                {vehiculesFiltered.map((v) => (
                   <tr key={v.id} className="border-t">
                     <td className="px-2 py-2">{v.immatriculation}</td>
                     <td className="px-2 py-2">{v.filiale || '—'}</td>
@@ -984,8 +1007,8 @@ function TauxTable({ taux, onSaved }) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        annee: row.annee,
-        carburant: row.carburant,
+        annee: new Date(row.date_debut).getFullYear(),
+        carburant: row.carburant_code,
         taux_cents: Number(draft.taux_cents),
         description: draft.description || null,
         reference_legale: draft.reference_legale,
@@ -1015,8 +1038,8 @@ function TauxTable({ taux, onSaved }) {
             <tr key={row.id} className="border-t">
               {editingId === row.id ? (
                 <>
-                  <td className="px-2 py-2">{row.annee}</td>
-                  <td className="px-2 py-2">{row.carburant}</td>
+                  <td className="px-2 py-2">{new Date(row.date_debut).getFullYear()}</td>
+                  <td className="px-2 py-2">{row.carburant_code}</td>
                   <td className="px-2 py-2">
                     <input
                       className="w-28 rounded border px-1"
@@ -1054,13 +1077,13 @@ function TauxTable({ taux, onSaved }) {
                         className="text-blue-700 underline"
                         onClick={() => window.open(row.reference_legale.trim(), '_blank', 'noopener,noreferrer')}
                       >
-                        {row.annee}
+                        {new Date(row.date_debut).getFullYear()}
                       </button>
                     ) : (
-                      <span>{row.annee}</span>
+                      <span>{new Date(row.date_debut).getFullYear()}</span>
                     )}
                   </td>
-                  <td className="px-2 py-2">{row.carburant}</td>
+                  <td className="px-2 py-2">{row.carburant_code}</td>
                   <td className="px-2 py-2">{toNum(row.taux_cents).toFixed(4)}</td>
                   <td className="px-2 py-2">{(toNum(row.taux_cents) / 100).toFixed(4)}</td>
                   <td className="px-2 py-2 max-w-xs truncate" title={row.description || ''}>{row.description || '—'}</td>
