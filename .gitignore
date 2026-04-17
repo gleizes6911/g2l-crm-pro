@@ -22,6 +22,11 @@
 
 # misc
 .DS_Store
+/uploads
+
+# Données locales / cache (WEX, direction, etc.) — ne pas versionner
+/data
+
 *.pem
 
 # debug
@@ -32,6 +37,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

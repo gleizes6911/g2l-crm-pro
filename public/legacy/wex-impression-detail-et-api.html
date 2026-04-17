@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WEX — Détail transaction (impression) & inventaire API</title>
+    <style>
+      :root {
+        --border: #222;
+        --muted: #555;
+        --head: #eaeaea;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        margin: 0;
+        padding: 16px 20px 48px;
+        color: #111;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      h1 {
+        font-size: 1.35rem;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 1.1rem;
+        margin: 28px 0 10px;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 4px;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0 20px;
+        page-break-inside: avoid;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--head);
+        font-weight: 600;
+        width: 28%;
+      }
+      td.val-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      pre,
+      .html-snippet {
+        margin: 8px 0 0;
+        padding: 10px;
+        background: #f6f6f6;
+        border: 1px solid #ccc;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 280px;
+        overflow: auto;
+      }
+      .page-break {
+        page-break-before: always;
+        padding-top: 16px;
+      }
+      .note {
+        background: #fff9e6;
+        border: 1px solid #e6c200;
+        padding: 10px 12px;
+        margin: 16px 0;
+        font-size: 12px;
+      }
+      @media print {
+        body {
+          padding: 0 12px 24px;
+          font-size: 11px;
+        }
+        .no-print {
+          display: none !important;
+        }
+        a {
+          color: #000;
+          text-decoration: none;
+        }
+        table {
+          font-size: 10px;
+        }
+        pre,
+        .html-snippet {
+          max-height: none;
+          overflow: visible;
+          font-size: 9px;
+        }
+      }
+      @page {
+        margin: 12mm;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="no-print" style="margin-top: 0">
+      <button type="button" onclick="window.print()">Imprimer / PDF</button>
+      — Fichier statique : ouvrir depuis le front (<code>/wex-impression-detail-et-api.html</code>) ou en local.
+    </p>
+
+    <h1>Détail transaction WEX (réponse brute API)</h1>
+    <p class="meta">
+      Exemple : <strong>16/03/2026</strong> — <code>POST /transaction/details</code> — JSON tel que renvoyé par l’API (plus
+      de champs envoyés par WEX : uniquement ceux présents pour cet appel).
+    </p>
+
+    <h2>Niveau transaction (objet racine)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Champ API</th>
+          <th>Description (usage courant)</th>
+          <th>Valeur (ex. 16/03/2026)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>postedTime</code></td>
+          <td>Horodatage enregistrement (ms Unix)</td>
+          <td class="val-num">1773673655000 <small>(UTC 2026-03-16 15:07:35)</small></td>
+        </tr>
+        <tr>
+          <td><code>effectiveAt</code></td>
+          <td>Date/heure effective transaction (ms Unix)</td>
+          <td class="val-num">1773656414000 <small>(UTC 2026-03-16 10:20:14)</small></td>
+        </tr>
+        <tr>
+          <td><code>accountNo</code></td>
+          <td>Numéro de compte client WEX</td>
+          <td>15578014</td>
+        </tr>
+        <tr>
+          <td><code>accountName</code></td>
+          <td>Nom compte / société (souvent aligné embossage)</td>
+          <td>D&amp;J TRANSPORT</td>
+        </tr>
+        <tr>
+          <td><code>cardNumber</code></td>
+          <td>Carte conducteur / paiement principale</td>
+          <td>78246057801400771</td>
+        </tr>
+        <tr>
+          <td><code>cardType</code></td>
+          <td>Type de carte</td>
+          <td>Dual Card Driver</td>
+        </tr>
+        <tr>
+          <td><code>secondCardNo</code></td>
+          <td>Carte véhicule liée</td>
+          <td>78246057801401738</td>
+        </tr>
+        <tr>
+          <td><code>driverName</code></td>
+          <td>Nom conducteur</td>
+          <td>SAURON Nicolas</td>
+        </tr>
+        <tr>
+          <td><code>authorisationNo</code></td>
+          <td>N° d’autorisation</td>
+          <td>0AE51F</td>
+        </tr>
+        <tr>
+          <td><code>batchNumber</code></td>
+          <td>N° lot</td>
+          <td>1234567890</td>
+        </tr>
+        <tr>
+          <td><code>captureType</code></td>
+          <td>Mode de lecture carte</td>
+          <td>Magnetic stripe read B</td>
+        </tr>
+        <tr>
+          <td><code>odoMeter</code></td>
+          <td>Compteur kilométrique (tel que fourni)</td>
+          <td>132090</td>
+        </tr>
+        <tr>
+          <td><code>adjProduct</code></td>
+          <td>Produit (libellé technique)</td>
+          <td>Diesel</td>
+        </tr>
+        <tr>
+          <td><code>productTranslationDescription</code></td>
+          <td>Libellé produit traduit</td>
+          <td>Diesel</td>
+        </tr>
+        <tr>
+          <td><code>transactionTypeDescription</code></td>
+          <td>Type d’opération</td>
+          <td>Purchase</td>
+        </tr>
+        <tr>
+          <td><code>transactionClass</code></td>
+          <td>Classe comptable / sens</td>
+          <td>Both Customer and Merchant</td>
+        </tr>
+        <tr>
+          <td><code>totalAmount</code></td>
+          <td>Montant total (repère)</td>
+          <td class="val-num">95.01</td>
+        </tr>
+        <tr>
+          <td><code>customerAmount</code></td>
+          <td>Montant client (avant ajust. affichage ticket)</td>
+          <td class="val-num">96.44</td>
+        </tr>
+        <tr>
+          <td><code>customerTaxAmount</code> / <code>total_customer_tax</code></td>
+          <td>TVA client</td>
+          <td class="val-num">16.07</td>
+        </tr>
+        <tr>
+          <td><code>customerRebateTotal</code></td>
+          <td>Total remises / écarts client</td>
+          <td class="val-num">-1.43</td>
+        </tr>
+        <tr>
+          <td><code>discountPerUnit</code></td>
+          <td>Remise unitaire (contexte prix)</td>
+          <td class="val-num">0.13</td>
+        </tr>
+        <tr>
+          <td><code>feeTotalTax</code> / <code>feeTotalAmount</code></td>
+          <td>Frais / TVA frais</td>
+          <td class="val-num">0 / 0</td>
+        </tr>
+        <tr>
+          <td><code>total_merchant_tax</code></td>
+          <td>TVA marchand</td>
+          <td class="val-num">0</td>
+        </tr>
+        <tr>
+          <td><code>originalCurrencyCode</code> / <code>customerCurrencyCode</code></td>
+          <td>Devises</td>
+          <td>EUR / EUR</td>
+        </tr>
+        <tr>
+          <td><code>cpl</code></td>
+          <td>Coût par litre (champ API)</td>
+          <td class="val-num">0</td>
+        </tr>
+        <tr>
+          <td><code>locationId</code> / <code>locationNo</code></td>
+          <td>Identifiant site</td>
+          <td>FR32215500</td>
+        </tr>
+        <tr>
+          <td><code>locationName</code></td>
+          <td>Nom du lieu</td>
+          <td>Carrefour Claira Perpignan</td>
+        </tr>
+        <tr>
+          <td><code>locationType</code></td>
+          <td>Type de lieu</td>
+          <td>Service Station</td>
+        </tr>
+        <tr>
+          <td><code>locationAddress</code></td>
+          <td>Adresse</td>
+          <td>CC Claira Salanca Route du Barcares</td>
+        </tr>
+        <tr>
+          <td><code>locationAddressSuburb</code></td>
+          <td>Ville / commune</td>
+          <td>Claira</td>
+        </tr>
+        <tr>
+          <td><code>locationAddressPostalCode</code></td>
+          <td>Code postal</td>
+          <td>66530</td>
+        </tr>
+        <tr>
+          <td><code>locClientMid</code></td>
+          <td>Identifiant client MID station</td>
+          <td>83</td>
+        </tr>
+        <tr>
+          <td><code>posTransactionsRX</code></td>
+          <td>Métadonnées POS (objet imbriqué)</td>
+          <td><code>{ "recordStatus": 0 }</code></td>
+        </tr>
+        <tr>
+          <td><code>additionalDetails</code></td>
+          <td>Bloc HTML détaillant le calcul prix pompe</td>
+          <td>
+            <pre class="html-snippet">&lt;div&gt;------------------------------------------------------------------------------------&lt;/div&gt;&lt;div&gt;*Merch Pump Price      Line #1  Diesel              Product Code:425&lt;/div&gt;&lt;div&gt;------------------------------------------------------------------------------------&lt;/div&gt;&lt;div&gt;Seq  Component Type                                          Discount          Value &lt;/div&gt;&lt;div&gt;------------------------------------------------------------------------------------&lt;/div&gt;&lt;div&gt;1    Pump Price                                                             166.5833 &lt;/div&gt;&lt;div&gt;2    M Price Group Rate                                                       0.0000 &lt;/div&gt;&lt;div&gt;------------------------------------------------------------------------------------&lt;/div&gt;&lt;div&gt;Total                                                                   166.58330000 &lt;/div&gt;&lt;div&gt;------------------------------------------------------------------------------------&lt;/div&gt;&lt;div&gt; * denotes pricing recipe selected&lt;/div&gt;</pre>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Ligne produit — <code>lineItems[0]</code></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Champ</th>
+          <th>Description</th>
+          <th>Valeur</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>product</code></td>
+          <td>Produit</td>
+          <td>Diesel</td>
+        </tr>
+        <tr>
+          <td><code>productCode</code></td>
+          <td>Code produit</td>
+          <td>425</td>
+        </tr>
+        <tr>
+          <td><code>isFuel</code></td>
+          <td>Carburant O/N</td>
+          <td>Y</td>
+        </tr>
+        <tr>
+          <td><code>country</code></td>
+          <td>Pays</td>
+          <td>France</td>
+        </tr>
+        <tr>
+          <td><code>invoiceNo</code></td>
+          <td>N° facture</td>
+          <td>FR40439665</td>
+        </tr>
+        <tr>
+          <td><code>quantity</code></td>
+          <td>Volume (L)</td>
+          <td class="val-num">47.53</td>
+        </tr>
+        <tr>
+          <td><code>originalUnitPrice</code></td>
+          <td>Prix unitaire brut (tel que remonté)</td>
+          <td class="val-num">199.9</td>
+        </tr>
+        <tr>
+          <td><code>originalValue</code></td>
+          <td>Montant ligne (valeur d’origine)</td>
+          <td class="val-num">95.01</td>
+        </tr>
+        <tr>
+          <td><code>customerValue</code></td>
+          <td>Valeur côté client</td>
+          <td class="val-num">96.44</td>
+        </tr>
+        <tr>
+          <td><code>customerTaxAmount</code></td>
+          <td>TVA ligne</td>
+          <td class="val-num">16.07</td>
+        </tr>
+        <tr>
+          <td><code>taxRate</code></td>
+          <td>Taux TVA %</td>
+          <td class="val-num">20</td>
+        </tr>
+        <tr>
+          <td><code>custPricOptDesc</code> / <code>custPricingDescription</code></td>
+          <td>Libellés option tarifaire</td>
+          <td>Pump - Discount / Pump Price - Discount</td>
+        </tr>
+        <tr>
+          <td><code>pricingDifferenceCust</code></td>
+          <td>Écart tarif client</td>
+          <td class="val-num">-1.43</td>
+        </tr>
+        <tr>
+          <td><code>customerRebateTotal</code></td>
+          <td>Remises ligne</td>
+          <td class="val-num">-1.43</td>
+        </tr>
+        <tr>
+          <td><code>transCurrCustUnitPrice</code></td>
+          <td>Prix unitaire devise client</td>
+          <td class="val-num">202.9</td>
+        </tr>
+        <tr>
+          <td><code>discountPerUnit</code></td>
+          <td>Remise unitaire (ligne)</td>
+          <td class="val-num">-3</td>
+        </tr>
+        <tr>
+          <td><code>discountFromPump</code></td>
+          <td>Remise pompe</td>
+          <td class="val-num">-0.03</td>
+        </tr>
+        <tr>
+          <td><code>rebateContributionTotal</code> / …Tax</td>
+          <td>Contributions remise</td>
+          <td class="val-num">0 / 0</td>
+        </tr>
+        <tr>
+          <td><code>discountAmount</code> / <code>discountPercentage</code></td>
+          <td>Remise montant / %</td>
+          <td class="val-num">0 / 0</td>
+        </tr>
+        <tr>
+          <td><code>affiliate*</code> (plusieurs champs)</td>
+          <td>Montants affiliés / frais (souvent 0)</td>
+          <td class="val-num">0…</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>Important :</strong> ce tableau reflète <strong>l’échantillon réel</strong> obtenu pour cette transaction. WEX peut
+      renvoyer d’autres champs ou des lignes <code>lineItems</code> supplémentaires selon les cas — le JSON brut reste la
+      référence. Pour régénérer le brut : <code>node scripts/wexTransactionDetailsRaw.js 2026-03-16</code>.
+    </div>
+
+    <div class="page-break"></div>
+
+    <h1>Inventaire — données WEX utilisées par cette application</h1>
+    <p class="meta">
+      Liste des <strong>endpoints WEX appelés dans le code</strong> (<code>services/wexService.js</code>) et des
+      <strong>fichiers JSON locaux</strong>. Ce n’est pas le catalogue officiel complet de toute l’API WEX OLS (d’autres routes
+      peuvent exister côté éditeur) : c’est tout ce que <strong>notre intégration</strong> exploite aujourd’hui.
+    </p>
+
+    <h2>Authentification</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Méthode</th>
+          <th>Endpoint</th>
+          <th>Rôle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>POST</td>
+          <td><code>/login</code> <small>(sur <code>WEX_BASE_URL</code>)</small></td>
+          <td>Obtention du jeton OAuth (<code>grant_type: password</code>) — mis en cache ~55 min.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Transactions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Méthode</th>
+          <th>Endpoint</th>
+          <th>Données typiques / pagination</th>
+          <th>Persistance locale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>POST</td>
+          <td><code>/transaction/search-transactions</code></td>
+          <td>
+            Liste des opérations sur plage de dates (<code>transactionList</code>, <code>hasMoreTransactions</code>,
+            <code>totalRows</code>, etc.) ; filtres dans le payload (dates, compte, …).
+          </td>
+          <td>Enrichi puis fusionné dans <code>data/wex/transactions.json</code> (hors git)</td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/transaction/details</code></td>
+          <td>
+            Détail complet d’une transaction (<code>transactionId</code>) : lieu, cartes, litres, taxes, lignes
+            <code>lineItems</code>, HTML <code>additionalDetails</code>, etc.
+          </td>
+          <td>Champs sélectionnés normalisés dans chaque entrée de <code>transactions.json</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Cartes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Méthode</th>
+          <th>Endpoint</th>
+          <th>Rôle</th>
+          <th>Persistance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>POST</td>
+          <td><code>/card/details</code></td>
+          <td>
+            Liste des cartes du compte (<code>customerNos</code>) ou détail par <code>cardNo</code> (sync complémentaire par PAN).
+          </td>
+          <td><code>data/wex/cards.json</code></td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/card/search-cards</code></td>
+          <td>Fallback si <code>/card/details</code> ne retourne pas de liste exploitable.</td>
+          <td>Idem → <code>cards.json</code></td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/card/list</code></td>
+          <td>Fallback secondaire (corps <code>customerNos</code> ou vide selon essais).</td>
+          <td>Idem</td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/card/search</code></td>
+          <td>Détail carte + indicateurs de contrôle / vélocité pour enrichissement limites.</td>
+          <td>Mergé dans objets carte en mémoire puis <code>cards.json</code></td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/card/order/default-profile</code></td>
+          <td>Profil de contrôle par défaut (pour compléter limites si besoin).</td>
+          <td>Non stocké seul ; peut enrichir l’objet carte</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Compte</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Méthode</th>
+          <th>Endpoint</th>
+          <th>Rôle</th>
+          <th>Persistance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>POST</td>
+          <td><code>/accounts/olssearch</code></td>
+          <td>
+            Recherche / synthèse compte (plusieurs variantes de corps testées dans le code pour compatibilité API).
+          </td>
+          <td><code>data/wex/account.json</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Fichiers locaux associés (hors appel API direct)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Fichier</th>
+          <th>Contenu</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>data/wex/sync_meta.json</code></td>
+          <td>Métadonnées de dernière synchro, erreurs, plage de dates.</td>
+        </tr>
+        <tr>
+          <td><code>data/wex/card_limits.json</code></td>
+          <td>Limites manuelles / surcharge par numéro de carte (saisie locale).</td>
+        </tr>
+        <tr>
+          <td><code>data/wex/card_vehicle_mapping.json</code></td>
+          <td>Correspondances manuelles carte ↔ libellé (si WEX ne fournit pas assez).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>API Express interne (données déjà synchronisées)</h2>
+    <p class="meta">
+      Ces routes ne rappellent pas WEX en direct : elles lisent le cache JSON via <code>jsonStore</code>.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Route</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GET /api/wex/transactions</code></td>
+          <td>Transactions paginées (filtre dates / véhicule).</td>
+        </tr>
+        <tr>
+          <td><code>GET /api/wex/stats/summary</code>, <code>/stats/monthly</code>, <code>/stats/vehicles</code>, <code>/stats/drivers</code></td>
+          <td>Agrégats pour tableaux de bord carburant WEX.</td>
+        </tr>
+        <tr>
+          <td><code>GET /api/wex/account/summary</code></td>
+          <td>Synthèse compte + consommation mensuelle par carte + limites.</td>
+        </tr>
+        <tr>
+          <td><code>POST /api/wex/sync</code></td>
+          <td>Lance <code>syncToLocal</code> (appels WEX + écriture locale).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="meta no-print" style="margin-top: 32px">
+      Document généré pour impression — projet mon-premier-projet. Pour toute évolution d’API, se référer à
+      <code>services/wexService.js</code> et à la documentation WEX côté portail développeur.
+    </p>
+  </body>
+</html>

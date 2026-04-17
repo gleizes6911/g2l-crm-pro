@@ -1,0 +1,188 @@
+/* tokens : importés dans globals.css */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;500;600;700;800&display=swap');
+
+/* @tailwind base/components/utilities : gérés par src/app/globals.css (Tailwind v4 + @source legacy) */
+
+html {
+  background: var(--color-bg);
+  min-height: 100%;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations custom pour module Exploitation */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .8;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+  background: linear-gradient(to right, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  background-size: 1000px 100%;
+}
+
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Rotation sur axe vertical (gyrophare) */
+@keyframes spin-y {
+  0% {
+    transform: perspective(600px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(600px) rotateY(360deg);
+  }
+}
+
+.animate-spin-y {
+  animation: spin-y 1.2s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* Gyrophare "réaliste" (dôme + base) + clignotement */
+.gyro {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.gyro__base {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 2px;
+  height: 7px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #111827 0%, #374151 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.gyro__dome {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 7px;
+  height: 16px;
+  border-radius: 12px 12px 6px 6px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 3px 10px rgba(239,68,68,0.25);
+  border: 1px solid rgba(127,29,29,0.55);
+  overflow: hidden;
+}
+
+@keyframes gyro-blink {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.45;
+    filter: brightness(1.35);
+  }
+}
+
+.gyro--blink .gyro__dome {
+  animation: gyro-blink 0.75s ease-in-out infinite;
+}
+
+/* Pouce "vient et s'en va" */
+@keyframes thumb-pop {
+  0% { transform: translateX(-6px); opacity: 0; }
+  20% { transform: translateX(0); opacity: 1; }
+  70% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(6px); opacity: 0; }
+}
+
+.animate-thumb-pop {
+  animation: thumb-pop 1.4s ease-in-out infinite;
+}
+
+.gyro--big {
+  width: 34px;
+  height: 34px;
+}
+
+.gyro--big .gyro__base {
+  left: 5px;
+  right: 5px;
+  height: 8px;
+}
+
+.gyro--big .gyro__dome {
+  left: 5px;
+  right: 5px;
+  bottom: 8px;
+  height: 19px;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

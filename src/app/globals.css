@@ -1,4 +1,6 @@
+@import "../legacy/design/tokens.css";
 @import "tailwindcss";
+@source "../legacy/**/*.{js,jsx}";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

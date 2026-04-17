@@ -1,0 +1,33 @@
+# Dépendances & builds
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next
+out
+
+# Git & IDE
+.git
+.gitignore
+.cursor
+*.md
+CLAUDE.md
+AGENTS.md
+
+# Env & secrets (injectés par Docker Compose / plateforme)
+.env
+.env.*
+!.env.example
+
+# Tests & qualité
+coverage
+.husky
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma (client régénéré pendant le build ; garder prisma/schema + migrations)
+src/generated

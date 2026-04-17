@@ -1,0 +1,5 @@
+DO $$ BEGIN
+  ALTER TYPE "UserRole" ADD VALUE 'ADMIN';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

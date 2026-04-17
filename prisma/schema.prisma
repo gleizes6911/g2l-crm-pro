@@ -1,4 +1,5 @@
 // Schéma G2L CRM — modèles métier + metadata JSON (champs personnalisés)
+// Tables legacy : champs snake_case. Ajustez les ENUM si votre export SQL diffère.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,6 +15,14 @@ enum UserRole {
   RH
   EXPLOIT
   SAV
+  ADMIN
+}
+
+enum StatutRapprochement {
+  NON_RAPPROCHE
+  RAPPROCHE_EN_COURS
+  RAPPROCHE
+  ECART
 }
 
 model User {
@@ -43,4 +52,279 @@ model AuditLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   timestamp DateTime @default(now())
   metadata  Json     @default("{}")
+}
+
+/// Table legacy `g2l_vehicules`
+model G2LVehicule {
+  id              String   @id @default(cuid())
+  salesforce_id   String?  @unique
+  immatriculation String?  @unique
+  nom             String?
+  energie         String?
+  metadata        Json     @default("{}")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  g2l_transactions_carburant G2LTransactionCarburant[] @relation("TransactionToVehicule")
+  g2l_cartes_carburant      G2LCarteCarburant[]
+
+  @@index([immatriculation], map: "idx_g2l_vehicules_immat")
+  @@map("g2l_vehicules")
+}
+
+/// Table legacy `g2l_cartes_carburant`
+model G2LCarteCarburant {
+  id             String   @id @default(cuid())
+  salesforce_id  String?  @unique
+  numero_carte   String   @unique
+  fournisseur    String?
+  vehicule_id    String?
+  vehicule       G2LVehicule? @relation(fields: [vehicule_id], references: [id], onDelete: SetNull)
+  metadata       Json     @default("{}")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  g2l_transactions_carburant G2LTransactionCarburant[]
+
+  @@index([vehicule_id])
+  @@map("g2l_cartes_carburant")
+}
+
+/// Table legacy `ticpe_taux` — `taux_cents` = centimes par litre (ex: 18.82)
+model G2LTicpeTaux {
+  id             String    @id @default(cuid())
+  carburant_code String
+  region_code    String?
+  taux_cents     Decimal   @db.Decimal(10, 4)
+  date_debut     DateTime
+  date_fin       DateTime?
+  metadata       Json      @default("{}")
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  g2l_transactions_carburant G2LTransactionCarburant[]
+
+  @@index([carburant_code, date_debut, date_fin])
+  @@map("ticpe_taux")
+}
+
+/// Table legacy `g2l_transactions_carburant`
+model G2LTransactionCarburant {
+  id                        String                 @id @default(cuid())
+  salesforce_id             String?                @unique
+  external_transaction_id   String?                @unique
+  fournisseur               String                 @default("WEX")
+  date_transaction          DateTime
+  type_carburant            String?
+  volume_litres             Decimal?               @db.Decimal(8, 3)
+  prix_litre_ttc            Decimal?               @db.Decimal(6, 4)
+  montant_ttc               Decimal                @db.Decimal(12, 2)
+  montant_ht                Decimal?               @db.Decimal(12, 2)
+  montant_tva               Decimal?               @db.Decimal(12, 2)
+  montant_tva_recuperable   Decimal?               @db.Decimal(12, 2)
+  montant_ticpe             Decimal?               @db.Decimal(12, 2)
+  consommation_estimee_litres Decimal?            @db.Decimal(8, 3)
+  statut_rapprochement      StatutRapprochement    @default(NON_RAPPROCHE)
+  immatriculation           String?
+  vehicule_id               String?
+  vehicule                  G2LVehicule? @relation("TransactionToVehicule", fields: [vehicule_id], references: [id], onDelete: SetNull)
+  carte_carburant_id        String?
+  carte_carburant           G2LCarteCarburant? @relation(fields: [carte_carburant_id], references: [id], onDelete: SetNull)
+  ticpe_taux_id             String?
+  ticpe_taux                G2LTicpeTaux? @relation(fields: [ticpe_taux_id], references: [id], onDelete: SetNull)
+  metadata                  Json       @default("{}")
+  created_at                DateTime   @default(now())
+  updated_at                DateTime   @updatedAt
+
+  @@index([vehicule_id])
+  @@index([carte_carburant_id])
+  @@index([ticpe_taux_id])
+  @@index([date_transaction, type_carburant], map: "idx_carburant_date")
+  @@index([immatriculation], map: "idx_transactions_immat")
+  @@map("g2l_transactions_carburant")
+}
+
+/// Table legacy `webfleet_trips` (structure minimale — à compléter si ton export SQL diffère)
+model WebfleetTrip {
+  id               String   @id @default(cuid())
+  external_trip_id String?
+  metadata         Json     @default("{}")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("webfleet_trips")
+}
+
+// ─── Tables SQL héritées (mon-premier-projet) : évite que `db push` les supprime ───
+
+model FecSociete {
+  id        Int       @id @default(autoincrement())
+  siren     String?   @unique @db.VarChar(9)
+  nom       String    @db.VarChar(255)
+  couleur   String?   @default("#2563eb") @db.VarChar(7)
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  exercices    FecExercice[]
+  ecritures    FecEcriture[]
+  societesRefs G2lSocieteRef[]
+
+  @@map("fec_societes")
+}
+
+model FecExercice {
+  id           Int       @id @default(autoincrement())
+  societeId    Int       @map("societe_id")
+  annee        Int
+  dateDebut    DateTime  @map("date_debut") @db.Date
+  dateFin      DateTime  @map("date_fin") @db.Date
+  nbEcritures  Int?      @default(0) @map("nb_ecritures")
+  nomFichier   String?   @map("nom_fichier") @db.VarChar(255)
+  createdAt    DateTime? @map("created_at")
+
+  societe   FecSociete    @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  ecritures FecEcriture[]
+
+  @@unique([societeId, annee, dateDebut, dateFin])
+  @@map("fec_exercices")
+}
+
+model FecEcriture {
+  id           Int       @id @default(autoincrement())
+  exerciceId   Int       @map("exercice_id")
+  societeId    Int       @map("societe_id")
+  journalCode  String?   @map("journal_code") @db.VarChar(10)
+  journalLib   String?   @map("journal_lib") @db.VarChar(100)
+  ecritureNum  String?   @map("ecriture_num") @db.VarChar(50)
+  ecritureDate DateTime? @map("ecriture_date") @db.Date
+  compteNum    String?   @map("compte_num") @db.VarChar(20)
+  compteLib    String?   @map("compte_lib") @db.VarChar(255)
+  compAuxNum   String?   @map("comp_aux_num") @db.VarChar(50)
+  compAuxLib   String?   @map("comp_aux_lib") @db.VarChar(255)
+  pieceRef     String?   @map("piece_ref") @db.VarChar(100)
+  pieceDate    DateTime? @map("piece_date") @db.Date
+  ecritureLib  String?   @map("ecriture_lib") @db.VarChar(500)
+  debit        Decimal?  @default(0) @db.Decimal(15, 2)
+  credit       Decimal?  @default(0) @db.Decimal(15, 2)
+  ecritureLet  String?   @map("ecriture_let") @db.VarChar(10)
+  dateLet      DateTime? @map("date_let") @db.Date
+  validDate    DateTime? @map("valid_date") @db.Date
+  montantDevise Decimal? @map("montant_devise") @db.Decimal(15, 2)
+  idevise      String?   @db.VarChar(10)
+  dateRglt     DateTime? @map("date_rglt") @db.Date
+  modeRglt     String?   @map("mode_rglt") @db.VarChar(20)
+  natOp        String?   @map("nat_op") @db.VarChar(50)
+  idClient     String?   @map("id_client") @db.VarChar(50)
+  hashEcriture String?   @map("hash_ecriture") @db.VarChar(32)
+
+  exercice FecExercice @relation(fields: [exerciceId], references: [id], onDelete: Cascade)
+  societe  FecSociete  @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, hashEcriture])
+  @@map("fec_ecritures")
+}
+
+model G2lSocieteRef {
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String    @unique @db.VarChar(20)
+  nom            String    @db.VarChar(200)
+  nomCourt       String?   @map("nom_court") @db.VarChar(50)
+  siren          String?   @db.VarChar(14)
+  type           String    @db.VarChar(30)
+  fecSocieteId   Int?      @map("fec_societe_id")
+  patternsSf     Json      @default("[]") @map("patterns_sf")
+  compteFecAchat String?   @map("compte_fec_achat") @db.VarChar(20)
+  contactNom     String?   @map("contact_nom") @db.VarChar(200)
+  contactEmail   String?   @map("contact_email") @db.VarChar(200)
+  contactTel     String?   @map("contact_tel") @db.VarChar(20)
+  idSalesforce   String?   @map("id_salesforce") @db.VarChar(50)
+  actif          Boolean   @default(true)
+  dateDebut      DateTime? @map("date_debut") @db.Date
+  dateFin        DateTime? @map("date_fin") @db.Date
+  notes          String?
+  createdAt      DateTime? @map("created_at")
+  updatedAt      DateTime? @map("updated_at")
+
+  fecSociete FecSociete?        @relation(fields: [fecSocieteId], references: [id], onDelete: SetNull)
+  contrats   G2lContratEmploi[]
+
+  @@map("g2l_societes")
+}
+
+model G2lPersonne {
+  id              String    @id @default(uuid()) @db.Uuid
+  nom             String    @db.VarChar(100)
+  prenom          String    @db.VarChar(100)
+  nomComplet      String?   @map("nom_complet") @db.VarChar(200)
+  dateNaissance   DateTime? @map("date_naissance") @db.Date
+  email           String?   @db.VarChar(200)
+  telephone       String?   @db.VarChar(20)
+  mobile          String?   @db.VarChar(20)
+  adresseRue      String?   @map("adresse_rue") @db.VarChar(200)
+  adresseCp       String?   @map("adresse_cp") @db.VarChar(10)
+  adresseVille    String?   @map("adresse_ville") @db.VarChar(100)
+  typePersonne    String    @map("type_personne") @db.VarChar(30)
+  idSalesforce    String?   @map("id_salesforce") @db.VarChar(50)
+  idWebfleet      String?   @map("id_webfleet") @db.VarChar(100)
+  sourceCreation  String    @default("MANUEL") @map("source_creation") @db.VarChar(20)
+  actif           Boolean   @default(true)
+  notes           String?
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  contrats G2lContratEmploi[]
+
+  @@map("g2l_personnes")
+}
+
+model G2lContratEmploi {
+  id                   String    @id @default(uuid()) @db.Uuid
+  personneId           String    @map("personne_id") @db.Uuid
+  societeId            String    @map("societe_id") @db.Uuid
+  typeContrat          String    @map("type_contrat") @db.VarChar(20)
+  poste                String?   @db.VarChar(100)
+  service              String?   @db.VarChar(100)
+  salaireBrutMensuel   Decimal?  @map("salaire_brut_mensuel") @db.Decimal(10, 2)
+  dateDebut            DateTime  @map("date_debut") @db.Date
+  dateFin              DateTime? @map("date_fin") @db.Date
+  actif                Boolean   @default(true)
+  notes                String?
+  createdAt            DateTime? @map("created_at")
+  updatedAt            DateTime? @map("updated_at")
+
+  personne G2lPersonne   @relation(fields: [personneId], references: [id], onDelete: Cascade)
+  societe  G2lSocieteRef @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@map("g2l_contrats_emploi")
+}
+
+model G2lParametreComptable {
+  id              String    @id @default(uuid()) @db.Uuid
+  categorie       String    @unique @db.VarChar(50)
+  comptesFec      Json      @map("comptes_fec")
+  description     String?   @db.VarChar(200)
+  inclusConsolid  Boolean   @default(true) @map("inclus_consolid")
+  actif           Boolean   @default(true)
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@map("g2l_parametres_comptables")
+}
+
+/// Compte connexion API legacy (table `utilisateurs`, distinct du modèle Prisma `User` audit Next)
+model UtilisateurLegacy {
+  id            String    @id
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  nom           String
+  prenom        String?
+  role          String    @default("EMPLOYE")
+  salesforceId  String?   @map("salesforce_id")
+  societe       String?
+  managerId     String?   @map("manager_id")
+  actif         Boolean   @default(true)
+  createdAt     DateTime? @map("created_at")
+  updatedAt     DateTime? @map("updated_at")
+
+  @@map("utilisateurs")
 }
